@@ -2,7 +2,7 @@
 
 Point it at a public GitHub repo, get a security review.
 
-The app picks up to 10 security relevant source files (auth, sessions, routes, queries, uploads, config), has Claude review them line by line, and checks `package.json` dependencies against the OSV vulnerability database.
+The app ranks every source file in the repo, reviews at least 10 of them (security relevant names like auth, session, query and upload first, then the best guesses from the rest of the code, up to about 50KB), has Claude review them line by line, and checks `package.json` dependencies against the OSV vulnerability database.
 
 ## Run locally
 
@@ -27,4 +27,5 @@ On Vercel, add the same variables under Project Settings, Environment Variables,
 
 - `app/page.tsx` is the UI.
 - `app/api/review/route.ts` fetches the repo tree, filters and downloads files, sends them to `claude-sonnet-5-5`, parses the JSON findings and runs the OSV check in parallel.
+- `lib/pick-files.ts` decides which files get reviewed.
 - `lib/types.ts` holds the shared types.

@@ -8,29 +8,10 @@ import {
   type Finding,
   type Severity,
 } from "@/lib/types";
+import { pickFiles, type TreeEntry } from "@/lib/pick-files";
 import { snippetAt } from "@/lib/snippet";
 
 const MODEL = "claude-sonnet-5-5";
-const MAX_FILES = 10;
-const MAX_FILE_BYTES = 20_000;
-
-const SOURCE_EXTENSIONS = [".js", ".ts", ".py", ".go", ".php", ".rb", ".java"];
-const SECURITY_WORDS = [
-  "auth",
-  "login",
-  "session",
-  "api",
-  "route",
-  "controller",
-  "db",
-  "sql",
-  "query",
-  "upload",
-  "exec",
-  "config",
-];
-const SKIP_WORDS = ["test", "node_modules", "dist"];
-
 const SYSTEM_PROMPT = `You are a senior application security reviewer. You will receive source files from a public GitHub repository. Each file starts with a "=== path ===" header and every line is prefixed with its line number.
 
 Return ONLY a JSON array, with no prose and no code fences. Each element must have exactly these keys:
@@ -40,9 +21,8 @@ Rules:
 - Only report real, exploitable vulnerabilities that you can tie to a specific line in the code you were given.
 - Use the exact file path from the header and the line number shown in the prefix.
 - No style nits, no best practice suggestions, no speculation about code you cannot see.
+- Report at most 15 findings, the most severe first.
 - If there are no real vulnerabilities, return [].`;
-
-type TreeEntry = { path: string; type: string; size?: number };
 
 class ReviewError extends Error {
   constructor(
@@ -111,19 +91,6 @@ async function fetchTree(owner: string, repo: string): Promise<TreeEntry[]> {
   }
   const data = (await res.json()) as { tree: TreeEntry[] };
   return data.tree;
-}
-
-function pickFiles(tree: TreeEntry[]): TreeEntry[] {
-  return tree
-    .filter((entry) => {
-      if (entry.type !== "blob") return false;
-      const path = entry.path.toLowerCase();
-      if (!SOURCE_EXTENSIONS.some((ext) => path.endsWith(ext))) return false;
-      if (SKIP_WORDS.some((word) => path.includes(word))) return false;
-      if ((entry.size ?? 0) > MAX_FILE_BYTES) return false;
-      return SECURITY_WORDS.some((word) => path.includes(word));
-    })
-    .slice(0, MAX_FILES);
 }
 
 async function fetchRaw(
@@ -274,7 +241,7 @@ export async function POST(request: Request) {
     const picked = pickFiles(tree);
     if (picked.length === 0) {
       throw new ReviewError(
-        "No security relevant source files found in this repo.",
+        "No source code we can review in this repo. We read JavaScript, TypeScript, Python, Go, PHP, Ruby and Java.",
         422,
       );
     }

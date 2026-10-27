@@ -145,9 +145,9 @@ export default function Home() {
             })}
           </div>
           <p className="mt-4 max-w-3xl px-1 text-sm text-muted">
-            Public repos only. We look at up to 10 files that touch auth,
-            sessions, queries, uploads and config, plus known CVEs in
-            package.json.
+            Public repos only. We review at least 10 files from anywhere in
+            the repo, starting with auth, sessions, queries, uploads and
+            config, plus known CVEs in package.json.
           </p>
         </section>
 
