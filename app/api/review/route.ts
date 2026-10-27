@@ -8,6 +8,7 @@ import {
   type Finding,
   type Severity,
 } from "@/lib/types";
+import { snippetAt } from "@/lib/snippet";
 
 const MODEL = "claude-sonnet-5-5";
 const MAX_FILES = 10;
@@ -293,10 +294,16 @@ export async function POST(request: Request) {
       checkDependencies(owner, repo, tree),
     ]);
 
+    const sources = new Map(files.map((f) => [f.path, f.content]));
+    const withSnippets = findings.map((f) => {
+      const source = sources.get(f.file.replace(/^\.?\//, ""));
+      return source ? { ...f, snippet: snippetAt(source, f.line) } : f;
+    });
+
     return NextResponse.json({
       repo: `${owner}/${repo}`,
       files: files.map((f) => f.path),
-      findings,
+      findings: withSnippets,
       dependencies,
     });
   } catch (error) {

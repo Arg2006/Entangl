@@ -1,21 +1,16 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import {
-  SEVERITIES,
-  type Finding,
-  type ReviewResult,
-  type Severity,
-} from "@/lib/types";
+import type { ReviewResult } from "@/lib/types";
+import { Results } from "./results";
 
 const DEFAULT_REPO = "https://github.com/OWASP/NodeGoat";
 
-const SEVERITY_STYLE: Record<Severity, string> = {
-  critical: "bg-[var(--crit-bg)] text-[var(--crit-ink)]",
-  high: "bg-[var(--high-bg)] text-[var(--high-ink)]",
-  medium: "bg-[var(--med-bg)] text-[var(--med-ink)]",
-  low: "bg-[var(--low-bg)] text-[var(--low-ink)]",
-};
+const EXAMPLES = [
+  { repo: "OWASP/NodeGoat", lang: "JavaScript" },
+  { repo: "anxolerd/dvpwa", lang: "Python" },
+  { repo: "appsecco/dvna", lang: "JavaScript" },
+];
 
 type Status = "idle" | "loading" | "done" | "error";
 
@@ -128,7 +123,28 @@ export default function Home() {
               )}
             </button>
           </form>
-          <p className="mt-3 max-w-3xl px-1 text-sm text-muted">
+          <div className="mt-4 flex max-w-3xl flex-wrap items-center gap-2 px-1">
+            <span className="text-sm text-muted">Or try</span>
+            {EXAMPLES.map((ex) => {
+              const url = `https://github.com/${ex.repo}`;
+              const active = repoUrl.trim() === url;
+              return (
+                <button
+                  key={ex.repo}
+                  type="button"
+                  disabled={status === "loading"}
+                  onClick={() => setRepoUrl(url)}
+                  className={`rounded-full border px-3 py-1 font-mono text-[13px] transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${active ? "border-ink/40 bg-surface text-ink" : "border-line text-muted hover:border-ink/30 hover:text-ink"}`}
+                >
+                  {ex.repo}
+                  <span className="ml-2 font-sans text-[12px] opacity-60">
+                    {ex.lang}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+          <p className="mt-4 max-w-3xl px-1 text-sm text-muted">
             Public repos only. We look at up to 10 files that touch auth,
             sessions, queries, uploads and config, plus known CVEs in
             package.json.
@@ -196,195 +212,6 @@ function LoadingState({
         Reviewing {shortRepo(repoUrl)}. This usually takes 20 to 40 seconds.
       </p>
     </section>
-  );
-}
-
-function Results({ result }: { result: ReviewResult }) {
-  const counts = SEVERITIES.map((s) => ({
-    severity: s,
-    count: result.findings.filter((f) => f.severity === s).length,
-  })).filter((c) => c.count > 0);
-
-  return (
-    <div className="space-y-10">
-      <section>
-        <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <h2 className="text-2xl font-semibold tracking-tight">
-              {result.findings.length === 0
-                ? "Nothing found"
-                : `${result.findings.length} ${result.findings.length === 1 ? "finding" : "findings"}`}
-            </h2>
-            <p className="mt-1 text-[15px] text-muted">
-              in{" "}
-              <a
-                href={`https://github.com/${result.repo}`}
-                target="_blank"
-                rel="noreferrer"
-                className="font-mono text-ink underline decoration-line underline-offset-4 hover:decoration-ink"
-              >
-                {result.repo}
-              </a>{" "}
-              across {result.files.length} files
-            </p>
-          </div>
-          {counts.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {counts.map((c) => (
-                <span
-                  key={c.severity}
-                  className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-medium capitalize ${SEVERITY_STYLE[c.severity]}`}
-                >
-                  <span className="tabular-nums">{c.count}</span> {c.severity}
-                </span>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {result.findings.length === 0 ? (
-          <div className="rounded-2xl border border-line bg-surface px-6 py-10 text-center text-muted">
-            No vulnerabilities with a concrete line in the files we scanned.
-          </div>
-        ) : (
-          <FindingsTable repo={result.repo} findings={result.findings} />
-        )}
-
-        <details className="group mt-4">
-          <summary className="inline-flex cursor-pointer items-center gap-1.5 text-sm text-muted hover:text-ink">
-            <Chevron />
-            Files reviewed
-          </summary>
-          <ul className="mt-3 grid gap-1.5 font-mono text-[13px] text-muted sm:grid-cols-2">
-            {result.files.map((f) => (
-              <li key={f} className="truncate">
-                <a
-                  href={`https://github.com/${result.repo}/blob/HEAD/${f}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="hover:text-ink"
-                >
-                  {f}
-                </a>
-              </li>
-            ))}
-          </ul>
-        </details>
-      </section>
-
-      {result.dependencies.length > 0 && (
-        <section>
-          <h2 className="text-2xl font-semibold tracking-tight">
-            Vulnerable dependencies
-          </h2>
-          <p className="mt-1 mb-5 text-[15px] text-muted">
-            Packages in package.json with known advisories in the OSV database.
-          </p>
-          <div className="overflow-hidden rounded-2xl border border-line bg-surface">
-            {result.dependencies.map((d, i) => (
-              <div
-                key={d.name}
-                className={`flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between ${i > 0 ? "border-t border-line" : ""}`}
-              >
-                <div className="font-mono text-[14px]">
-                  {d.name}
-                  <span className="text-muted">@{d.version}</span>
-                </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {d.ids.slice(0, 6).map((id) => (
-                    <a
-                      key={id}
-                      href={`https://osv.dev/vulnerability/${id}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="rounded-md border border-line bg-surface-2 px-2 py-0.5 font-mono text-[12px] text-muted transition-colors hover:border-ink/30 hover:text-ink"
-                    >
-                      {id}
-                    </a>
-                  ))}
-                  {d.ids.length > 6 && (
-                    <span className="px-1 py-0.5 text-[12px] text-muted">
-                      +{d.ids.length - 6} more
-                    </span>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-    </div>
-  );
-}
-
-function FindingsTable({
-  repo,
-  findings,
-}: {
-  repo: string;
-  findings: Finding[];
-}) {
-  return (
-    <div className="overflow-x-auto rounded-2xl border border-line bg-surface">
-      <table className="w-full min-w-[920px] border-collapse text-left text-[14px]">
-        <thead>
-          <tr className="border-b border-line bg-surface-2 text-[13px] text-muted">
-            <th className="px-5 py-3 font-medium">File</th>
-            <th className="px-3 py-3 font-medium">Severity</th>
-            <th className="px-3 py-3 font-medium">CWE</th>
-            <th className="px-3 py-3 font-medium">Issue</th>
-            <th className="px-5 py-3 font-medium">Suggested fix</th>
-          </tr>
-        </thead>
-        <tbody>
-          {findings.map((f, i) => (
-            <tr
-              key={`${f.file}:${f.line}:${i}`}
-              className="border-b border-line align-top transition-colors last:border-0 hover:bg-surface-2"
-            >
-              <td className="max-w-[240px] px-5 py-4">
-                <a
-                  href={`https://github.com/${repo}/blob/HEAD/${f.file}${f.line ? `#L${f.line}` : ""}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="font-mono text-[13px] leading-relaxed break-all hover:underline"
-                >
-                  {f.file}
-                  {f.line > 0 && <span className="text-muted">:{f.line}</span>}
-                </a>
-              </td>
-              <td className="px-3 py-4">
-                <span
-                  className={`inline-block rounded-full px-2.5 py-0.5 text-[12px] font-semibold capitalize ${SEVERITY_STYLE[f.severity]}`}
-                >
-                  {f.severity}
-                </span>
-              </td>
-              <td className="px-3 py-4 whitespace-nowrap">
-                <CweLink cwe={f.cwe} />
-              </td>
-              <td className="px-3 py-4 leading-relaxed">{f.issue}</td>
-              <td className="px-5 py-4 leading-relaxed text-muted">{f.fix}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
-function CweLink({ cwe }: { cwe: string }) {
-  const id = cwe.match(/\d+/)?.[0];
-  if (!id) return <span className="text-muted">{cwe || "n/a"}</span>;
-  return (
-    <a
-      href={`https://cwe.mitre.org/data/definitions/${id}.html`}
-      target="_blank"
-      rel="noreferrer"
-      className="font-mono text-[13px] text-muted underline decoration-line underline-offset-4 hover:text-ink hover:decoration-ink"
-    >
-      CWE-{id}
-    </a>
   );
 }
 
@@ -528,27 +355,6 @@ function Spinner() {
         stroke="currentColor"
         strokeWidth="3"
         strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
-function Chevron() {
-  return (
-    <svg
-      width="12"
-      height="12"
-      viewBox="0 0 12 12"
-      fill="none"
-      className="transition-transform group-open:rotate-90"
-      aria-hidden
-    >
-      <path
-        d="M4.5 2.5 8 6l-3.5 3.5"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
       />
     </svg>
   );

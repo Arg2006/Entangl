@@ -8,6 +8,7 @@ export type Finding = {
   cwe: string;
   issue: string;
   fix: string;
+  snippet?: Snippet;
 };
 
 export type DependencyVuln = {
@@ -21,4 +22,9 @@ export type ReviewResult = {
   files: string[];
   findings: Finding[];
   dependencies: DependencyVuln[];
+};
+
+export type Snippet = {
+  start: number;
+  lines: string[];
 };
