@@ -431,12 +431,18 @@ function CiBlock() {
     >
       <summary className="flex cursor-pointer items-center justify-between gap-4 px-5 py-5 sm:px-6">
         <div>
-          <div className="text-[17px] font-semibold tracking-tight">
-            Run this on every PR
+          <div className="flex flex-wrap items-center gap-2.5">
+            <span className="text-[17px] font-semibold tracking-tight">
+              Run this on every PR
+            </span>
+            <span className="rounded-full border border-line px-2.5 py-0.5 text-[12px] font-medium text-muted">
+              Coming soon
+            </span>
           </div>
           <div className="mt-0.5 text-[15px] text-muted">
-            Drop this into .github/workflows and the build fails when a
-            critical issue lands.
+            The plan: drop this into .github/workflows and the build fails
+            when a critical issue lands. Today it reviews the main branch, not
+            the code in the pull request, so treat it as a preview.
           </div>
         </div>
         <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-line text-muted transition group-open:rotate-45">
